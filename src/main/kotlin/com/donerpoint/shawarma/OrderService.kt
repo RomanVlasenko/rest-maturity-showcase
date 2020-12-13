@@ -4,24 +4,32 @@ import com.google.gson.Gson
 import org.springframework.stereotype.Service
 import javax.ws.rs.POST
 import javax.ws.rs.Path
+import javax.ws.rs.PathParam
 
-//Level 0 - The Swamp of POX
+//Level 1 - Resources
 
 @Service
-@Path("/")
+@Path("/orders")
 class OrderService {
 
     val gson = Gson()
 
     @POST
-    fun processRequest(data: String): String? {
+    fun orders(data: String): String? {
         val elements = data.split(":")
 
         when (elements[0]) {
             "create" -> return OrdersStore.save(elements[1]).toString()
-            "get" -> return gson.toJson(OrdersStore.get(elements[1].toInt()))
-            "delete" -> return OrdersStore.delete(elements[1].toInt())
-            "list" -> return gson.toJson(OrdersStore.list())
+            else -> return gson.toJson(OrdersStore.list())
+        }
+    }
+
+    @POST
+    @Path("{id}")
+    fun processOrder(@PathParam("id") orderId: String, operationType: String): String? {
+        when (operationType) {
+            "get" -> return gson.toJson(OrdersStore.get(orderId.toInt()))
+            "delete" -> return OrdersStore.delete(orderId.toInt())
         }
 
         return "[error] unknown operation type"
