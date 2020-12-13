@@ -2,11 +2,10 @@ package com.donerpoint.shawarma
 
 import com.google.gson.Gson
 import org.springframework.stereotype.Service
-import javax.ws.rs.POST
-import javax.ws.rs.Path
-import javax.ws.rs.PathParam
+import javax.ws.rs.*
+import javax.ws.rs.core.Response
 
-//Level 1 - Resources
+//Level 2 - HTTP verbs
 
 @Service
 @Path("/orders")
@@ -15,23 +14,37 @@ class OrderService {
     val gson = Gson()
 
     @POST
-    fun orders(data: String): String? {
-        val elements = data.split(":")
+    fun create(data: String): String {
+        return OrdersStore.save(data).toString()
+    }
 
-        when (elements[0]) {
-            "create" -> return OrdersStore.save(elements[1]).toString()
-            else -> return gson.toJson(OrdersStore.list())
+    @GET
+    fun list(): String {
+        return gson.toJson(OrdersStore.list())
+    }
+
+    @GET
+    @Path("{id}")
+    fun get(@PathParam("id") orderId: String): Response {
+        val order = OrdersStore.get(orderId.toInt())
+
+        return if (order == null) {
+            Response.status(Response.Status.NOT_FOUND).build()
+        } else {
+            Response.ok(gson.toJson(order)).build()
         }
     }
 
-    @POST
+    @DELETE
     @Path("{id}")
-    fun processOrder(@PathParam("id") orderId: String, operationType: String): String? {
-        when (operationType) {
-            "get" -> return gson.toJson(OrdersStore.get(orderId.toInt()))
-            "delete" -> return OrdersStore.delete(orderId.toInt())
-        }
+    fun delete(@PathParam("id") orderId: String): Response {
+        val order = OrdersStore.get(orderId.toInt())
 
-        return "[error] unknown operation type"
+        return if (order == null) {
+            Response.status(Response.Status.NOT_FOUND).build()
+        } else {
+            OrdersStore.delete(orderId.toInt())
+            Response.ok().build()
+        }
     }
 }
