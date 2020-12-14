@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service
 import javax.ws.rs.*
 import javax.ws.rs.core.Response
 
-//Level 2 - HTTP verbs
+//Level 3 - Hypermedia Controls: Content negotiation
 
 @Service
 @Path("/orders")
@@ -19,13 +19,34 @@ class OrderService {
     }
 
     @GET
-    fun list(): String {
+    @Produces("application/json")
+    fun listJson(): String {
         return gson.toJson(OrdersStore.list())
     }
 
     @GET
+    @Produces("text/plain")
+    fun listText(): String {
+        return OrdersStore.list().map { it.id.toString() + ":" + it.description }.joinToString("\n")
+    }
+
+    @GET
+    @Produces("text/*")
     @Path("{id}")
-    fun get(@PathParam("id") orderId: String): Response {
+    fun getJson(@PathParam("id") orderId: String): Response {
+        val order = OrdersStore.get(orderId.toInt())
+
+        return if (order == null) {
+            Response.status(Response.Status.NOT_FOUND).build()
+        } else {
+            Response.ok(order.id.toString() + ":" + order.description).build()
+        }
+    }
+
+    @GET
+    @Produces("application/json")
+    @Path("{id}")
+    fun getText(@PathParam("id") orderId: String): Response {
         val order = OrdersStore.get(orderId.toInt())
 
         return if (order == null) {
