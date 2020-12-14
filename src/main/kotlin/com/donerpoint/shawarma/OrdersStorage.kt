@@ -11,9 +11,8 @@ object OrdersStore {
         return id
     }
 
-    fun delete(orderId: Int):String {
+    fun delete(orderId: Int) {
         orders.remove(orderId)
-        return "OK"
     }
 
     fun get(orderId: Int): Order? {
