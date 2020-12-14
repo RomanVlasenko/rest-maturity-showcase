@@ -3,15 +3,20 @@ package com.donerpoint.shawarma
 import com.google.gson.Gson
 import org.springframework.stereotype.Service
 import javax.ws.rs.*
+import javax.ws.rs.core.Context
+import javax.ws.rs.core.Link
 import javax.ws.rs.core.Response
+import javax.ws.rs.core.UriInfo
 
-//Level 3 - Hypermedia Controls: Content negotiation
+//Level 3 - Hypermedia Controls: HATEOAS
 
 @Service
 @Path("/orders")
 class OrderService {
 
     val gson = Gson()
+
+    data class OrderWithSelfLink(val description: String, val id: Int, val self: Link)
 
     @POST
     fun create(data: String): String {
@@ -20,8 +25,13 @@ class OrderService {
 
     @GET
     @Produces("application/json")
-    fun listJson(): String {
-        return gson.toJson(OrdersStore.list())
+    fun listJson(@Context uriInfo: UriInfo): String {
+        return gson.toJson(OrdersStore.list().map {
+            val selfLink = Link.fromUri(uriInfo.absolutePath.resolve(uriInfo.path + "/" + it.id.toString()))
+                    .rel("self").type("GET").build()
+
+            OrderWithSelfLink(it.description, it.id, selfLink)
+        })
     }
 
     @GET
@@ -33,7 +43,7 @@ class OrderService {
     @GET
     @Produces("text/*")
     @Path("{id}")
-    fun getJson(@PathParam("id") orderId: String): Response {
+    fun getText(@PathParam("id") orderId: String): Response {
         val order = OrdersStore.get(orderId.toInt())
 
         return if (order == null) {
@@ -46,13 +56,19 @@ class OrderService {
     @GET
     @Produces("application/json")
     @Path("{id}")
-    fun getText(@PathParam("id") orderId: String): Response {
+    fun getJson(@PathParam("id") orderId: String, @Context uriInfo: UriInfo): Response {
         val order = OrdersStore.get(orderId.toInt())
 
         return if (order == null) {
             Response.status(Response.Status.NOT_FOUND).build()
         } else {
-            Response.ok(gson.toJson(order)).build()
+
+            val selfLink = Link.fromUri(uriInfo.absolutePath).rel("self").type("GET").build()
+            val getLink = Link.fromUri(uriInfo.absolutePath).rel("self").type("GET").build()
+            val deleteLink = Link.fromUri(uriInfo.absolutePath).rel("self").type("DELETE").build()
+
+            val orderWithSelfLink = OrderWithSelfLink(order.description, order.id, selfLink)
+            return Response.ok(gson.toJson(orderWithSelfLink)).links(getLink, deleteLink).build()
         }
     }
 
